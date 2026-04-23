@@ -1,15 +1,14 @@
 from flask import Flask, render_template, request, jsonify, make_response
 import json, requests, uuid, re
+import os
 
 app = Flask(__name__)
 app.secret_key = "secret-key"
 
 # 🔑 PUT NEW KEY HERE
-GEMINI_API_KEY = "AIzaSyBPa_O29r77HFRWSW5osyHEaQZnhB3hjJc"
-
+GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', 'AIzaSyBPa_O29r77HFRWSW5osyHEaQZnhB3hjJc')
 # ✅ CORRECT ENDPOINT + MODEL
-GEMINI_URL = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash-latest:generateContent?key={GEMINI_API_KEY}"
-
+GEMINI_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
 SESSIONS = {}
 
 QUESTIONS = [
