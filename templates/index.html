@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mindscape — Personality Profiler</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --cream: #faf6f0;
+      --warm-white: #fff9f2;
+      --sand: #e8ddd0;
+      --terracotta: #c97b5a;
+      --terracotta-light: #e8a07e;
+      --terracotta-pale: #f5e6dc;
+      --sage: #7a9e8e;
+      --sage-light: #a8c4b8;
+      --sage-pale: #e8f2ee;
+      --cocoa: #3d2b1f;
+      --cocoa-mid: #6b4c38;
+      --gold: #d4a853;
+      --gold-pale: #f5edda;
+      --text-dark: #2c1f14;
+      --text-mid: #6b5848;
+      --text-light: #9e8878;
+      --radius: 20px;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'DM Sans',sans-serif; background:var(--cream); color:var(--text-dark); min-height:100vh; }
+    body::before {
+      content:''; position:fixed; inset:0; pointer-events:none; z-index:0;
+      background:
+        radial-gradient(ellipse 60% 50% at 20% 20%,rgba(201,123,90,.07) 0%,transparent 60%),
+        radial-gradient(ellipse 50% 60% at 80% 80%,rgba(122,158,142,.07) 0%,transparent 60%);
+    }
+
+    /* ── SCREENS ── */
+    .screen { min-height:100vh; display:flex; flex-direction:column; position:relative; z-index:1; }
+
+    /* ── WELCOME ── */
+    #welcome-screen { align-items:center; justify-content:center; padding:2rem; }
+    .welcome-card {
+      background:var(--warm-white); border:1px solid var(--sand); border-radius:32px;
+      padding:3.5rem 3rem; max-width:460px; width:100%; text-align:center;
+      box-shadow:0 8px 40px rgba(61,43,31,.08);
+    }
+    .welcome-orb {
+      width:88px; height:88px;
+      background:linear-gradient(135deg,var(--terracotta-light),var(--terracotta));
+      border-radius:50%; margin:0 auto 1.5rem;
+      display:flex; align-items:center; justify-content:center;
+      font-size:36px; box-shadow:0 8px 24px rgba(201,123,90,.3);
+      animation:float 4s ease-in-out infinite;
+    }
+    @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-8px)} }
+    .brand-sub { font-size:.78rem; letter-spacing:.16em; text-transform:uppercase; color:var(--terracotta); font-weight:600; margin-bottom:.5rem; }
+    .welcome-card h1 { font-family:'DM Serif Display',serif; font-size:2.1rem; color:var(--text-dark); margin-bottom:1rem; letter-spacing:-.02em; }
+    .welcome-desc { color:var(--text-mid); line-height:1.75; font-size:.93rem; margin-bottom:1.8rem; }
+    .pill-tags { display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-bottom:2rem; }
+    .pill { background:var(--terracotta-pale); color:var(--terracotta); border-radius:50px; padding:5px 14px; font-size:.78rem; font-weight:500; }
+    .pill.sage { background:var(--sage-pale); color:var(--sage); }
+    .pill.gold { background:var(--gold-pale); color:#b8892a; }
+    .btn-primary {
+      background:linear-gradient(135deg,var(--terracotta),#b8603a); color:#fff;
+      border:none; padding:14px 36px; border-radius:50px;
+      font-size:.95rem; font-family:'DM Sans',sans-serif; font-weight:600;
+      cursor:pointer; transition:all .2s; box-shadow:0 4px 16px rgba(201,123,90,.35);
+    }
+    .btn-primary:hover { transform:translateY(-2px); box-shadow:0 8px 24px rgba(201,123,90,.45); }
+    .privacy-note { margin-top:1.2rem; font-size:.75rem; color:var(--text-light); }
+
+    /* ── CHAT ── */
+    #chat-screen { display:none; flex-direction:column; }
+    .chat-header {
+      display:flex; align-items:center; justify-content:space-between;
+      padding:1rem 1.5rem; background:var(--warm-white);
+      border-bottom:1px solid var(--sand); position:sticky; top:0; z-index:10;
+    }
+    .chat-header-left { display:flex; align-items:center; gap:10px; }
+    .header-orb {
+      width:36px; height:36px;
+      background:linear-gradient(135deg,var(--terracotta-light),var(--terracotta));
+      border-radius:50%; display:flex; align-items:center; justify-content:center;
+      font-size:16px; box-shadow:0 2px 8px rgba(201,123,90,.25);
+    }
+    .header-name { font-weight:600; font-size:.95rem; }
+    .header-status { font-size:.75rem; color:var(--sage); display:flex; align-items:center; gap:4px; }
+    .status-dot { width:6px; height:6px; background:var(--sage); border-radius:50%; animation:pulse 2s ease-in-out infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+    .progress-wrap { display:flex; align-items:center; gap:10px; }
+    .progress-bar-bg { width:100px; height:6px; background:var(--sand); border-radius:3px; overflow:hidden; }
+    .progress-bar-fill { height:100%; background:linear-gradient(90deg,var(--terracotta-light),var(--terracotta)); border-radius:3px; width:0; transition:width .5s ease; }
+    .progress-label { font-size:.75rem; color:var(--text-light); }
+
+    #chat-box {
+      flex:1; overflow-y:auto; padding:1.5rem 1rem;
+      display:flex; flex-direction:column; gap:16px;
+      max-width:720px; width:100%; margin:0 auto;
+    }
+    .message { max-width:80%; padding:13px 17px; font-size:.92rem; line-height:1.65; animation:fadeUp .3s ease; border-radius:18px; }
+    @keyframes fadeUp { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+    .message.ai { background:var(--warm-white); color:var(--text-dark); align-self:flex-start; border-radius:4px 18px 18px 18px; border:1px solid var(--sand); box-shadow:0 2px 8px rgba(61,43,31,.05); }
+    .message.user { background:linear-gradient(135deg,var(--terracotta-light),var(--terracotta)); color:#fff; align-self:flex-end; border-radius:18px 4px 18px 18px; }
+
+    .typing-indicator { display:flex; gap:4px; padding:14px 18px; background:var(--warm-white); border:1px solid var(--sand); border-radius:4px 18px 18px 18px; align-self:flex-start; }
+    .typing-dot { width:8px; height:8px; background:var(--terracotta-light); border-radius:50%; animation:bounce 1.2s ease-in-out infinite; }
+    .typing-dot:nth-child(2){animation-delay:.15s} .typing-dot:nth-child(3){animation-delay:.3s}
+    @keyframes bounce { 0%,60%,100%{transform:translateY(0);opacity:.5} 30%{transform:translateY(-5px);opacity:1} }
+
+    .chat-footer { padding:1rem; background:var(--warm-white); border-top:1px solid var(--sand); max-width:720px; width:100%; margin:0 auto; }
+    .input-row { display:flex; gap:10px; align-items:center; }
+    .input-row input {
+      flex:1; padding:13px 18px; border-radius:50px;
+      border:1.5px solid var(--sand); background:var(--cream);
+      color:var(--text-dark); font-family:'DM Sans',sans-serif; font-size:.92rem;
+      outline:none; transition:border-color .2s;
+    }
+    .input-row input:focus { border-color:var(--terracotta-light); box-shadow:0 0 0 3px rgba(201,123,90,.12); }
+    .input-row input::placeholder { color:var(--text-light); }
+    .send-btn {
+      width:46px; height:46px; border-radius:50%; flex-shrink:0;
+      background:linear-gradient(135deg,var(--terracotta-light),var(--terracotta));
+      border:none; cursor:pointer; display:flex; align-items:center; justify-content:center;
+      box-shadow:0 3px 10px rgba(201,123,90,.3); transition:all .2s;
+    }
+    .send-btn:hover { transform:scale(1.07); }
+    .send-btn svg { width:18px; height:18px; fill:#fff; }
+
+    #profile-btn-wrap { display:none; text-align:center; padding:1rem; border-top:1px solid var(--sand); max-width:720px; width:100%; margin:0 auto; }
+    .reveal-btn {
+      background:linear-gradient(135deg,var(--sage-light),var(--sage)); color:#fff;
+      border:none; padding:14px 36px; border-radius:50px;
+      font-size:.95rem; font-family:'DM Sans',sans-serif; font-weight:600;
+      cursor:pointer; box-shadow:0 4px 16px rgba(122,158,142,.35); transition:all .2s;
+    }
+    .reveal-btn:hover { transform:translateY(-2px); }
+
+    /* ── LOADING ── */
+    #loading-screen {
+      display:none; position:fixed; inset:0; background:var(--cream);
+      z-index:200; flex-direction:column; align-items:center; justify-content:center; gap:1.5rem;
+    }
+    .spinner { width:56px; height:56px; border:4px solid var(--sand); border-top-color:var(--terracotta); border-radius:50%; animation:spin .9s linear infinite; }
+    @keyframes spin { to{transform:rotate(360deg)} }
+    .loading-text { color:var(--text-mid); font-size:.95rem; }
+
+    /* ── PROFILE ── */
+    #profile-screen { display:none; background:var(--cream); overflow-y:auto; }
+    .profile-scroll { max-width:680px; margin:0 auto; padding:2rem 1.5rem 4rem; }
+
+    .profile-hero {
+      text-align:center; padding:2.5rem 1.5rem 2rem;
+      background:linear-gradient(135deg,var(--terracotta-pale),var(--sage-pale));
+      border-radius:var(--radius); margin-bottom:1.5rem; border:1px solid var(--sand);
+    }
+    .profile-avatar {
+      width:80px; height:80px;
+      background:linear-gradient(135deg,var(--terracotta-light),var(--terracotta));
+      border-radius:50%; margin:0 auto 1rem;
+      display:flex; align-items:center; justify-content:center;
+      font-size:32px; box-shadow:0 8px 24px rgba(201,123,90,.3);
+    }
+    #personality-type { font-family:'DM Serif Display',serif; font-size:1.9rem; margin-bottom:.8rem; letter-spacing:-.02em; }
+    #p-summary { color:var(--text-mid); line-height:1.75; font-size:.93rem; max-width:480px; margin:0 auto; }
+
+    .card {
+      background:var(--warm-white); border:1px solid var(--sand);
+      border-radius:var(--radius); padding:1.5rem; margin-bottom:1rem;
+      box-shadow:0 2px 12px rgba(61,43,31,.04);
+    }
+    .card-label { font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600; color:var(--terracotta); margin-bottom:1rem; }
+    .card-label.sage { color:var(--sage); }
+    .card-label.gold { color:var(--gold); }
+
+    /* Trait bars */
+    .trait-row { margin-bottom:18px; }
+    .trait-header { display:flex; justify-content:space-between; margin-bottom:4px; }
+    .trait-name { font-size:.87rem; font-weight:500; }
+    .trait-score { font-size:.82rem; font-weight:600; color:var(--terracotta); }
+    .trait-desc { font-size:.78rem; color:var(--text-light); margin-bottom:7px; }
+    .bar-bg { height:8px; background:var(--sand); border-radius:4px; overflow:hidden; }
+    .bar-fill { height:100%; background:linear-gradient(90deg,var(--terracotta-light),var(--terracotta)); border-radius:4px; width:0; transition:width 1s ease .2s; }
+
+    /* Radar chart */
+    .chart-wrap { position:relative; height:240px; }
+
+    /* Two-col */
+    .two-col { display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem; }
+    .hi-card { border-radius:var(--radius); padding:1.25rem; border:1px solid; }
+    .hi-card.green { background:var(--sage-pale); border-color:rgba(122,158,142,.3); }
+    .hi-card.red { background:#fef3ee; border-color:rgba(201,123,90,.25); }
+    .hi-card h4 { font-size:.72rem; text-transform:uppercase; letter-spacing:.12em; font-weight:600; margin-bottom:8px; }
+    .hi-card.green h4 { color:var(--sage); }
+    .hi-card.red h4 { color:var(--terracotta); }
+    .hi-card p { font-size:.87rem; color:var(--text-mid); line-height:1.65; }
+
+    .info-text { color:var(--text-mid); font-size:.9rem; line-height:1.75; }
+
+    /* Suggestions */
+    .sug-item { display:flex; gap:12px; align-items:flex-start; padding:12px 0; border-bottom:1px solid var(--sand); }
+    .sug-item:last-child { border-bottom:none; }
+    .sug-icon { width:36px; height:36px; border-radius:10px; background:var(--terracotta-pale); display:flex; align-items:center; justify-content:center; font-size:16px; flex-shrink:0; }
+    .sug-text b { display:block; font-size:.85rem; margin-bottom:3px; }
+    .sug-text p { font-size:.82rem; color:var(--text-mid); line-height:1.6; }
+
+    /* Quote */
+    .quote-card { background:linear-gradient(135deg,var(--cocoa),var(--cocoa-mid)); border-radius:var(--radius); padding:2rem; text-align:center; margin-bottom:1.5rem; }
+    .quote-mark { font-family:'DM Serif Display',serif; font-size:3rem; color:var(--terracotta-light); line-height:.5; margin-bottom:1rem; }
+    #p-quote { font-family:'DM Serif Display',serif; font-style:italic; font-size:1.1rem; color:var(--cream); line-height:1.7; }
+
+    .restart-btn {
+      display:block; margin:0 auto; background:transparent;
+      border:1.5px solid var(--sand); color:var(--text-mid);
+      padding:11px 28px; border-radius:50px;
+      font-family:'DM Sans',sans-serif; font-size:.88rem; cursor:pointer; transition:all .2s;
+    }
+    .restart-btn:hover { border-color:var(--terracotta-light); color:var(--terracotta); background:var(--terracotta-pale); }
+
+    @media(max-width:500px) {
+      .two-col { grid-template-columns:1fr; }
+      .welcome-card { padding:2.5rem 1.5rem; }
+      #personality-type { font-size:1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════ SCREEN 1: WELCOME ═══════════════ -->
+<div id="welcome-screen" class="screen" style="align-items:center;justify-content:center;padding:2rem;">
+  <div class="welcome-card">
+    <div class="welcome-orb">🧠</div>
+    <p class="brand-sub">Mindscape</p>
+    <h1>Know Yourself</h1>
+    <p class="welcome-desc">Answer 8 casual questions. Our AI quietly maps your personality and reveals a full profile — with trait scores, insights, and personalized suggestions.</p>
+    <div class="pill-tags">
+      <span class="pill">8 questions</span>
+      <span class="pill sage">~3 minutes</span>
+      <span class="pill gold">Deep insights</span>
+    </div>
+    <button class="btn-primary" onclick="startChat()">Start Conversation</button>
+    <p class="privacy-note">🔒 Completely private — nothing stored after your session</p>
+  </div>
+</div>
+
+<!-- ═══════════════ SCREEN 2: CHAT ═══════════════ -->
+<div id="chat-screen" class="screen">
+  <div class="chat-header">
+    <div class="chat-header-left">
+      <div class="header-orb">🧠</div>
+      <div>
+        <div class="header-name">Mindscape</div>
+        <div class="header-status"><span class="status-dot"></span> Here with you</div>
+      </div>
+    </div>
+    <div class="progress-wrap">
+      <div class="progress-bar-bg"><div class="progress-bar-fill" id="prog-fill"></div></div>
+      <span class="progress-label" id="prog-label">0 / 8</span>
+    </div>
+  </div>
+
+  <div id="chat-box"></div>
+
+  <div class="chat-footer">
+    <div class="input-row">
+      <input id="msg-input" type="text" placeholder="Share your thoughts…" autocomplete="off" />
+      <button class="send-btn" id="send-btn" onclick="sendMsg()">
+        <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="profile-btn-wrap">
+    <button class="reveal-btn" onclick="loadProfile()">✨ Reveal My Personality Profile</button>
+  </div>
+</div>
+
+<!-- ═══════════════ LOADING ═══════════════ -->
+<div id="loading-screen">
+  <div class="spinner"></div>
+  <p class="loading-text">Analyzing your personality…</p>
+</div>
+
+<!-- ═══════════════ SCREEN 3: PROFILE ═══════════════ -->
+<div id="profile-screen" class="screen">
+  <div class="profile-scroll">
+
+    <div class="profile-hero">
+      <div class="profile-avatar">🧬</div>
+      <h1 id="personality-type"></h1>
+      <p id="p-summary"></p>
+    </div>
+
+    <!-- Trait Bars -->
+    <div class="card">
+      <div class="card-label">Personality Traits</div>
+      <div id="trait-bars"></div>
+    </div>
+
+    <!-- Radar Chart -->
+    <div class="card">
+      <div class="card-label">Trait Overview</div>
+      <div class="chart-wrap"><canvas id="radar-chart"></canvas></div>
+    </div>
+
+    <!-- Strength + Blind Spot -->
+    <div class="two-col">
+      <div class="hi-card green"><h4>Hidden Strength</h4><p id="p-strength"></p></div>
+      <div class="hi-card red"><h4>Blind Spot</h4><p id="p-blindspot"></p></div>
+    </div>
+
+    <!-- Thinking Style -->
+    <div class="card">
+      <div class="card-label">Thinking Style</div>
+      <p id="p-thinking" class="info-text"></p>
+    </div>
+
+    <!-- Emotional Pattern -->
+    <div class="card">
+      <div class="card-label sage">Emotional Pattern</div>
+      <p id="p-emotion" class="info-text"></p>
+    </div>
+
+    <!-- Suggestions -->
+    <div class="card">
+      <div class="card-label gold">How to Grow</div>
+      <div id="suggestions"></div>
+    </div>
+
+    <!-- Quote -->
+    <div class="quote-card">
+      <div class="quote-mark">"</div>
+      <p id="p-quote"></p>
+    </div>
+
+    <button onclick="location.reload()" class="restart-btn">↩ Start Over</button>
+  </div>
+</div>
+
+<script>
+  const ICONS = { Productivity:'⚡', Relationships:'🤝', 'Mental Health':'🌿', Career:'🚀' };
+
+  // ── show / hide helpers ──
+  function show(id) { document.getElementById(id).style.display = 'flex'; }
+  function hide(id) { document.getElementById(id).style.display = 'none'; }
+
+  // ── typing dots ──
+  function showTyping() {
+    const box = document.getElementById('chat-box');
+    const el = document.createElement('div');
+    el.className = 'typing-indicator'; el.id = 'typing';
+    el.innerHTML = '<div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div>';
+    box.appendChild(el); box.scrollTop = box.scrollHeight;
+  }
+  function removeTyping() { const t = document.getElementById('typing'); if(t) t.remove(); }
+
+  // ── add chat bubble ──
+  function addMsg(who, text) {
+    const box = document.getElementById('chat-box');
+    const d = document.createElement('div');
+    d.className = 'message ' + who;
+    d.textContent = text;
+    box.appendChild(d);
+    box.scrollTop = box.scrollHeight;
+  }
+
+  // ── update progress bar ──
+  function setProgress(n, total) {
+    document.getElementById('prog-label').textContent = n + ' / ' + total;
+    document.getElementById('prog-fill').style.width = Math.min((n/total)*100, 100) + '%';
+  }
+
+  // ── START ──
+  async function startChat() {
+    hide('welcome-screen');
+    const cs = document.getElementById('chat-screen');
+    cs.style.display = 'flex'; cs.style.flexDirection = 'column';
+
+    showTyping();
+    try {
+      const res = await fetch('/start', { method:'POST' });
+      const data = await res.json();
+      removeTyping();
+      addMsg('ai', data.message);
+      setProgress(data.question_number, data.total);
+      enableInput();
+    } catch(e) {
+      removeTyping();
+      addMsg('ai', 'Something went wrong starting the chat. Please refresh.');
+    }
+  }
+
+  // ── SEND MESSAGE ──
+  async function sendMsg() {
+    const input = document.getElementById('msg-input');
+    const text = input.value.trim();
+    if (!text) return;
+
+    // Lock input while waiting
+    disableInput();
+    addMsg('user', text);
+    input.value = '';
+    showTyping();
+
+    try {
+      const res = await fetch('/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: text })
+      });
+      const data = await res.json();
+      removeTyping();
+      addMsg('ai', data.message);
+      setProgress(data.question_number, data.total);
+
+      if (data.done) {
+        // Show reveal button, keep input locked with done message
+        input.placeholder = 'All done! ✨ Tap the button below';
+        document.getElementById('profile-btn-wrap').style.display = 'block';
+      } else {
+        // Re-enable input for next answer
+        enableInput();
+      }
+    } catch(e) {
+      removeTyping();
+      addMsg('ai', 'Sorry, something went wrong. Please type your answer again.');
+      enableInput(); // ALWAYS re-enable on error so user is never stuck
+    }
+  }
+
+  function enableInput() {
+    const input = document.getElementById('msg-input');
+    const btn = document.getElementById('send-btn');
+    input.disabled = false;
+    btn.disabled = false;
+    input.placeholder = 'Share your thoughts…';
+    input.focus();
+  }
+
+  function disableInput() {
+    const input = document.getElementById('msg-input');
+    const btn = document.getElementById('send-btn');
+    input.disabled = true;
+    btn.disabled = true;
+  }
+
+  // Enter key support
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('msg-input').addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !this.disabled) sendMsg();
+    });
+  });
+
+  // ── LOAD PROFILE ──
+  async function loadProfile() {
+    hide('chat-screen');
+    const ls = document.getElementById('loading-screen');
+    ls.style.display = 'flex';
+
+    try {
+      const res = await fetch('/profile');
+      const data = await res.json();
+      ls.style.display = 'none';
+
+      if (data.error) {
+        alert('Error generating profile: ' + data.error);
+        const cs = document.getElementById('chat-screen');
+        cs.style.display = 'flex'; cs.style.flexDirection = 'column';
+        return;
+      }
+
+      renderProfile(data);
+      const ps = document.getElementById('profile-screen');
+      ps.style.display = 'flex'; ps.style.flexDirection = 'column';
+
+    } catch(e) {
+      ls.style.display = 'none';
+      alert('Network error. Please try again.');
+      const cs = document.getElementById('chat-screen');
+      cs.style.display = 'flex'; cs.style.flexDirection = 'column';
+    }
+  }
+
+  // ── RENDER PROFILE ──
+  function renderProfile(d) {
+    document.getElementById('personality-type').textContent = d.personality_type || 'Your Profile';
+    document.getElementById('p-summary').textContent      = d.summary || '';
+    document.getElementById('p-thinking').textContent     = d.thinking_style || '';
+    document.getElementById('p-emotion').textContent      = d.emotional_pattern || '';
+    document.getElementById('p-strength').textContent     = d.hidden_strength || '';
+    document.getElementById('p-blindspot').textContent    = d.blind_spot || '';
+    document.getElementById('p-quote').textContent        = d.quote || '';
+
+    // ── Trait bars ──
+    const traits = d.traits || [];
+    const barsEl = document.getElementById('trait-bars');
+    barsEl.innerHTML = '';
+    traits.forEach((t, i) => {
+      const row = document.createElement('div');
+      row.className = 'trait-row';
+      row.innerHTML = `
+        <div class="trait-header">
+          <span class="trait-name">${t.trait}</span>
+          <span class="trait-score">${t.level}/10</span>
+        </div>
+        <div class="trait-desc">${t.description}</div>
+        <div class="bar-bg"><div class="bar-fill" id="b${i}"></div></div>`;
+      barsEl.appendChild(row);
+      setTimeout(() => {
+        const el = document.getElementById('b' + i);
+        if (el) el.style.width = (t.level * 10) + '%';
+      }, 200 + i * 150);
+    });
+
+    // ── Radar chart ──
+    setTimeout(() => {
+      const ctx = document.getElementById('radar-chart').getContext('2d');
+      new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: traits.map(t => t.trait),
+          datasets: [{
+            data: traits.map(t => t.level),
+            backgroundColor: 'rgba(201,123,90,0.15)',
+            borderColor: '#c97b5a',
+            borderWidth: 2,
+            pointBackgroundColor: '#c97b5a',
+            pointRadius: 5
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          scales: {
+            r: {
+              min: 0, max: 10, ticks: { stepSize: 2, display: false },
+              grid: { color: 'rgba(61,43,31,0.1)' },
+              angleLines: { color: 'rgba(61,43,31,0.1)' },
+              pointLabels: { font: { family: 'DM Sans', size: 12 }, color: '#6b5848' }
+            }
+          },
+          plugins: { legend: { display: false } }
+        }
+      });
+    }, 400);
+
+    // ── Suggestions ──
+    const sugEl = document.getElementById('suggestions');
+    sugEl.innerHTML = '';
+    (d.improvements || []).forEach(item => {
+      const icon = ICONS[item.area] || '💡';
+      const div = document.createElement('div');
+      div.className = 'sug-item';
+      div.innerHTML = `
+        <div class="sug-icon">${icon}</div>
+        <div class="sug-text"><b>${item.area}</b><p>${item.suggestion}</p></div>`;
+      sugEl.appendChild(div);
+    });
+  }
+</script>
+</body>
+</html>
